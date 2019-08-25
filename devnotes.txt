@@ -1,0 +1,10 @@
+Notes to help do fiddly processes without bumps.
+
+TILED - new tilesets (not as easy as it would seem)
+-create tileset in Tiled from multiple images.
+-create a tilemap of exactly the right size to contain one of each of the tiles from the tileset.
+-export this tilemap as a .png.
+-create a completely fresh tileset from the single image tilesheet (with the same gridsize). (!Important!)
+-load this tileset into your map tileset.
+-embed the tileset.
+-export map as .json

@@ -1,3 +1,177 @@
+//set up UI first
+class sceneUI extends Phaser.Scene {
+
+    constructor ()
+    {
+        super({ key: 'UIScene', active: true });
+
+        this.score = 0;
+    }
+
+    create ()
+    {
+        //  Our Text object to display the Score
+        projectileText = this.add.text(16, 16, projectilename + ' : 0', { fontSize: '32px', fill: '#ffffff' });
+
+        //  Grab a reference to the Game Scene
+        let ourGame = this.scene.get('GameScene');
+
+        //  Listen for events from it
+        ourGame.events.on('updateProjectileCount', function () {
+
+            this.score += 10;
+
+            info.setText('Score: ' + this.score);
+
+        }, this);
+    }
+}
+
+
+class sceneLevelOne extends Phaser.Scene {
+
+    constructor ()
+    {
+        super('GameScene');
+    }
+
+/**
+ * Load up our image assets.
+ */
+    preload () {
+        this.load.image('background', 'assets/background.png');
+        this.load.image('mininglaser', 'assets/tiles/interactables/yellowlaserextension.png');
+        this.load.image('rock', 'assets/rock.png');
+        this.load.image('tiles', 'assets/tiletest3.png')
+        this.load.image('asteroid', 'assets/tiles/asteroid/asteroidtiles.png' )
+        this.load.image('all_lasers', 'assets/tiles/interactables/lasersheet.png' )
+        this.load.tilemapTiledJSON('mymap', 'assets/maplvl1.json');
+        this.load.multiatlas('spaceman', '/assets/tiles/character/spacesprite2.json', 'assets/tiles/character');
+        this.load.image('momentitepile', 'assets/tiles/props/momentitetiles.png' );
+    }
+
+    create () {
+
+        //-- MAP LOADING --
+        const map = this.make.tilemap({ key: "mymap" });
+
+        // Parameters are the name you gave the tileset in Tiled and then the key of the tileset image in
+        // Phaser's cache (i.e. the name you used in preload)
+        const tileset1 = map.addTilesetImage("tiletest3", "tiles");
+        const tileset2 = map.addTilesetImage("asteroidtiles", "asteroid");
+        const yellow_laser_tiles = map.addTilesetImage("mylasers", "all_lasers");
+        const momentite_tiles = map.addTilesetImage('proptiles', 'momentitepile');
+        
+        // Parameters: layer name (or index) from Tiled, tileset, x, y
+        const layer = map.createStaticLayer("Tile Layer 1", tileset1,0,0);
+        const flayer = map.createStaticLayer("Tile Layer 2", tileset2,0,0);
+        var yellowlasers = map.createStaticLayer("Yellow Laser", yellow_laser_tiles,0,0);
+        const proplayer = map.createStaticLayer("Props", momentite_tiles, 0 ,0);
+        //enable collisions on all tiles in below layers
+        console.log(yellowlasers);
+        layer.setCollisionBetween(tileset1.firstgid, tileset1.firstgid+tileset1.total -1);
+        flayer.setCollisionBetween(tileset2.firstgid, tileset2.firstgid +tileset2.total -1);
+        yellowlasers.setCollisionBetween(yellow_laser_tiles.firstgid, yellow_laser_tiles.firstgid + yellow_laser_tiles.total -1);
+
+        // commented out making sprites from tiles for now until better understood
+        // using tile gloabl or local???
+        var lasersprites = this.physics.add.group();
+        lasersprites.addMultiple(map.createFromTiles([256, 257,258], null, {key: 'mininglaser'}));
+        lasersprites.setVelocityX(-300);
+        
+        console.log(lasersprites);
+
+        // -- PLAYER LOADING --
+        player = this.physics.add.sprite(200, 200, 'spaceman');
+
+        //player anims
+        var confusedframes = this.anims.generateFrameNames('spaceman', {
+            start: 1, end: 4, zeroPad: 3,
+            prefix: 'astropantsed', suffix: '.png'
+        });
+        this.anims.create({ key: 'confused', frames: confusedframes, frameRate: 4, repeat: -1 });
+
+        var rightframes = this.anims.generateFrameNames('spaceman', {
+            start: 1, end: 4, zeroPad: 3,
+            prefix: 'astroturnright', suffix: '.png'
+        });
+        this.anims.create({ key: 'turnright', frames: rightframes, frameRate: 4, repeat: 0 });
+
+        var leftframes = this.anims.generateFrameNames('spaceman', {
+            start: 1, end: 4, zeroPad: 3,
+            prefix: 'astroturnleft', suffix: '.png'
+        });
+        this.anims.create({ key: 'turnleft', frames: leftframes, frameRate: 4, repeat: 0 });
+
+        //start player
+        player.anims.play('confused', true);            
+
+        player.setCollideWorldBounds(false);
+        player.setActive(true);
+        player.setBounce(0);
+        player.setData('cling', 'INITIAL',);
+        playerDirection = 'UP';
+
+
+        //-- PHYSICS RULES --
+        projectiles = this.physics.add.group();
+        this.physics.add.collider(player, layer, clingToWorld, null, this);
+        this.physics.add.collider(player, flayer, clingToWorld, null, this);
+        this.physics.add.collider(player, yellowlasers, null, null, this);
+        this.physics.add.overlap(player, lasersprites, yellowEffects, null, this)
+        //this.physics.add.overlap(player, yellowlasers,yellowEffects, null ,this);
+
+        //this.physics.add.collider(player, layer, stickToWall);
+        //this.physics.add.collider(projectiles, layer, destroyRock);
+
+        //-- INPUT CONTROLS --
+        cursors = this.input.keyboard.createCursorKeys();
+        this.input.keyboard.on('keydown-SPACE', attemptJumpThrow, null);
+        
+        //-- CAMERA SETTINGS --
+        this.cameras.main.setSize(screenWidth, screenHeight);
+        this.cameras.main.startFollow(player, 1, 0.04, 0.04);
+
+        //-- LEVEL 1 SETTINGS --
+        setProjectileCount(5);
+    }
+
+    update () {
+            playerDirection = currentDirection();
+        
+            if (cursors.left.isDown && (player.getData('cling')) && player.getData('cling') != 'left')
+            {
+                player.setVelocityX(-300);
+                player.setVelocityY(0);
+                player.setData('cling', null);
+        
+            }
+            else if (cursors.right.isDown &&(player.getData('cling')) && player.getData('cling') != 'right')
+            {
+                player.setVelocityX(300);
+                player.setVelocityY(0);
+                player.setData('cling', null);
+        
+            }
+        
+            if (cursors.up.isDown && (player.getData('cling')) && player.getData('cling') != 'up')
+            {
+                player.setVelocityY(-330);
+                player.setVelocityX(0);
+                player.setData('cling', null);
+            }
+        
+            if (cursors.down.isDown && (player.getData('cling')) && player.getData('cling') != 'down')
+            {
+                player.setVelocityY(330);
+                player.setVelocityX(0);
+                player.setData('cling', null);
+            }
+        
+    }
+}
+
+//game initialisation
 const screenWidth = 800;
 const screenHeight = 600;
 
@@ -13,106 +187,32 @@ const config = {
             debug: false
         }
     },
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
-    }
+    scene: [sceneLevelOne, sceneUI]
 };
+
+//global variable declarations
 
 var player;
 var playerDirection;
 var projectiles;
 var projectilecount;
+var projectileText;
 var cursors;
+var projectilename = 'Momentite';
 
 var game = new Phaser.Game(config);
 
-/**
- * Load up our image assets.
- */
-function preload () {
-    this.load.image('background', 'assets/background.png');
-    this.load.image('player', 'assets/player.png');
-    this.load.image('rock', 'assets/rock.png');
-    this.load.image('tiles', 'assets/tiletest3.png')
-    this.load.image('asteroid', 'assets/tiles/asteroid/asteroidtiles.png' )
-    this.load.tilemapTiledJSON('mymap', 'assets/maplvl1.json');
-    this.load.multiatlas('spaceman', '/assets/tiles/character/spacesprite2.json', 'assets/tiles/Character');
 
+//FUNCTIONS (COULD BE SEPERATE FILE & GROUPED)
+
+function setProjectileCount(newnum){
+    projectilecount = newnum
+    projectileText.setText(projectilename + " : " + projectilecount);
 }
 
-function create () {
-
-    //-- MAP LOADING --
-    const map = this.make.tilemap({ key: "mymap" });
-
-    // Parameters are the name you gave the tileset in Tiled and then the key of the tileset image in
-    // Phaser's cache (i.e. the name you used in preload)
-    const tileset1 = map.addTilesetImage("tiletest3", "tiles");
-    const tileset2 = map.addTilesetImage("asteroidtiles", "asteroid");
-    
-    
-    // Parameters: layer name (or index) from Tiled, tileset, x, y
-    //background layer (no collisions)
-   // const bg = map.createStaticLayer("background", tileset1, 0, 0);
-    //world layer  (collisions enabled)
-    const layer = map.createStaticLayer("Tile Layer 1", tileset1,0,0);
-    const flayer = map.createStaticLayer("Tile Layer 2", tileset2,0,0);
-    layer.setCollisionBetween(0,230, true);
-    flayer.setCollisionBetween(0,230, true); 
-
-
-    // -- PLAYER LOADING --
-    player = this.physics.add.sprite(100, 100, 'spaceman');
-
-    //player anims
-    var confusedframes = this.anims.generateFrameNames('spaceman', {
-        start: 1, end: 4, zeroPad: 3,
-        prefix: 'astropantsed', suffix: '.png'
-    });
-    this.anims.create({ key: 'confused', frames: confusedframes, frameRate: 4, repeat: -1 });
-
-    var rightframes = this.anims.generateFrameNames('spaceman', {
-        start: 1, end: 4, zeroPad: 3,
-        prefix: 'astroturnright', suffix: '.png'
-    });
-    this.anims.create({ key: 'turnright', frames: rightframes, frameRate: 4, repeat: 0 });
-
-    var leftframes = this.anims.generateFrameNames('spaceman', {
-        start: 1, end: 4, zeroPad: 3,
-        prefix: 'astroturnleft', suffix: '.png'
-    });
-    this.anims.create({ key: 'turnleft', frames: leftframes, frameRate: 4, repeat: 0 });
-
-    //start player
-    player.anims.play('confused', true);            
-
-    player.setCollideWorldBounds(false);
-    player.setActive(true);
-    player.setBounce(0);
-    player.setData('cling', 'INITIAL',);
-    playerDirection = 'UP';
-
-
-    //-- PHYSICS RULES --
-    projectiles = this.physics.add.group();
-    this.physics.add.collider(player, layer, clingToWorld, null, this);
-    this.physics.add.collider(player, flayer, clingToWorld, null, this);
-
-    //this.physics.add.collider(player, layer, stickToWall);
-    //this.physics.add.collider(projectiles, layer, destroyRock);
-
-    //-- INPUT CONTROLS --
-    cursors = this.input.keyboard.createCursorKeys();
-    this.input.keyboard.on('keydown-SPACE', attemptJumpThrow, null);
-      
-    //-- CAMERA SETTINGS --
-    this.cameras.main.setSize(screenWidth, screenHeight);
-    this.cameras.main.startFollow(player, 1, 0.04, 0.04);
-
-    //-- LEVEL 1 SETTINGS --
-    projectilecount = 5;
+function adjustProjectileCount(adjustment){
+    projectilecount = projectilecount + adjustment;
+    projectileText.setText(projectilename +  " : " + projectilecount);
 }
 
 function clingToWorld(){
@@ -131,6 +231,15 @@ function clingToWorld(){
         player.setData('cling', 'right');
     }
 }
+
+//yellow lasers disintegrate all of your minerals.
+function yellowEffects(){
+    console.log("hit YELLOW laser");
+    setProjectileCount(0);
+    this.cameras.main.flash(1, 255,255,0);
+}
+
+
 
 function destroyProjectile(projectile, wall) {
     projectile.destroy();
@@ -152,7 +261,7 @@ function attemptJumpThrow(context) {
 
     if (anyCursorHeld() && projectilecount > 0) {
         direction = playerDirection;
-        projectilecount--;
+        adjustProjectileCount(-1);
 
         var r = projectiles.create(player.x, player.y, 'rock').setScale(0.05);
 
@@ -186,36 +295,10 @@ function attemptJumpThrow(context) {
     }
 }
 
-function update () {
-    playerDirection = currentDirection();
-
-    if (cursors.left.isDown && (player.getData('cling')) && player.getData('cling') != 'left')
-    {
-        player.setVelocityX(-300);
-        player.setVelocityY(0);
-        player.setData('cling', null);
-
+function arrayFromRange(start, end){
+    var myarray = []
+    for (var x = start; x <= end; x++){
+        myarray.push(x);
     }
-    else if (cursors.right.isDown &&(player.getData('cling')) && player.getData('cling') != 'right')
-    {
-        player.setVelocityX(300);
-        player.setVelocityY(0);
-        player.setData('cling', null);
-
-    }
-
-    if (cursors.up.isDown && (player.getData('cling')) && player.getData('cling') != 'up')
-    {
-        player.setVelocityY(-330);
-        player.setVelocityX(0);
-        player.setData('cling', null);
-    }
-
-    if (cursors.down.isDown && (player.getData('cling')) && player.getData('cling') != 'down')
-    {
-        player.setVelocityY(330);
-        player.setVelocityX(0);
-        player.setData('cling', null);
-    }
-
+    return myarray;
 }
