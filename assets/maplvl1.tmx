@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.2" tiledversion="1.2.4" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="96" tileheight="40" infinite="0" nextlayerid="7" nextobjectid="1">
+<map version="1.2" tiledversion="1.2.4" orientation="orthogonal" renderorder="right-down" width="100" height="100" tilewidth="96" tileheight="40" infinite="0" nextlayerid="8" nextobjectid="4">
  <tileset firstgid="1" name="asteroidtiles" tilewidth="96" tileheight="40" tilecount="9" columns="3">
   <image source="tiles/asteroid/asteroidtiles.png" width="288" height="120"/>
  </tileset>

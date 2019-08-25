@@ -10,23 +10,17 @@ class sceneUI extends Phaser.Scene {
 
     create ()
     {
-        //  Our Text object to display the Score
+        //  Our Text objects to display
         projectileText = this.add.text(16, 16, projectilename + ' : 0', { fontSize: '32px', fill: '#ffffff' });
 
-        //  Grab a reference to the Game Scene
-        let ourGame = this.scene.get('GameScene');
+        timeText = this.add.text(400, 16, 'Time : 0', { fontSize: '32px', fill: '#ffffff' });
+        console.log(this.time)
+    }
 
-        //  Listen for events from it
-        ourGame.events.on('updateProjectileCount', function () {
-
-            this.score += 10;
-
-            info.setText('Score: ' + this.score);
-
-        }, this);
+    update(){
+        timeText.setText('Time : ' + ((this.time.now)/1000).toFixed(0));
     }
 }
-
 
 class sceneLevelOne extends Phaser.Scene {
 
@@ -39,7 +33,9 @@ class sceneLevelOne extends Phaser.Scene {
  * Load up our image assets.
  */
     preload () {
-        this.load.image('background', 'assets/background.png');
+        this.load.image('momentiteone', 'assets/tiles/props/momentiteonepile.png');
+        this.load.image('momentitetwo', 'assets/tiles/props/momentitetwopile.png');
+        this.load.image('momentitethree', 'assets/tiles/props/momentitethreepile.png');
         this.load.image('mininglaser', 'assets/tiles/interactables/yellowlaserextension.png');
         this.load.image('rock', 'assets/rock.png');
         this.load.image('tiles', 'assets/tiletest3.png')
@@ -47,7 +43,7 @@ class sceneLevelOne extends Phaser.Scene {
         this.load.image('all_lasers', 'assets/tiles/interactables/lasersheet.png' )
         this.load.tilemapTiledJSON('mymap', 'assets/maplvl1.json');
         this.load.multiatlas('spaceman', '/assets/tiles/character/spacesprite2.json', 'assets/tiles/character');
-        this.load.image('momentitepile', 'assets/tiles/props/momentitetiles.png' );
+        this.load.image('momentitepile', 'assets/tiles/props/momentitetiles.png');
     }
 
     create () {
@@ -66,20 +62,24 @@ class sceneLevelOne extends Phaser.Scene {
         const layer = map.createStaticLayer("Tile Layer 1", tileset1,0,0);
         const flayer = map.createStaticLayer("Tile Layer 2", tileset2,0,0);
         var yellowlasers = map.createStaticLayer("Yellow Laser", yellow_laser_tiles,0,0);
-        const proplayer = map.createStaticLayer("Props", momentite_tiles, 0 ,0);
+        
         //enable collisions on all tiles in below layers
-        console.log(yellowlasers);
         layer.setCollisionBetween(tileset1.firstgid, tileset1.firstgid+tileset1.total -1);
         flayer.setCollisionBetween(tileset2.firstgid, tileset2.firstgid +tileset2.total -1);
-        yellowlasers.setCollisionBetween(yellow_laser_tiles.firstgid, yellow_laser_tiles.firstgid + yellow_laser_tiles.total -1);
 
-        // commented out making sprites from tiles for now until better understood
-        // using tile gloabl or local???
+        //make sprites from Tiled map. (Possibly a hacky method)
         var lasersprites = this.physics.add.group();
-        lasersprites.addMultiple(map.createFromTiles([256, 257,258], null, {key: 'mininglaser'}));
-        lasersprites.setVelocityX(-300);
-        
-        console.log(lasersprites);
+        lasersprites.addMultiple(map.createFromTiles([252,253,254,255,256, 257,258,259], null, {key: 'mininglaser'},this,this.cameras.main,yellowlasers));
+        yellowlasers.destroy();
+
+        var proplayer = map.createStaticLayer("Props", momentite_tiles, 0 ,0);
+        var momentiteone = this.physics.add.group();
+        momentiteone.addMultiple(map.createFromTiles(momentite_tiles.firstgid, null, {key: 'momentiteone'}, this, this.cameras.main, proplayer));
+        var momentitetwo = this.physics.add.group();
+        momentitetwo.addMultiple(map.createFromTiles(momentite_tiles.firstgid+1, null, {key: 'momentitetwo'}, this, this.cameras.main, proplayer));
+        var momentitethree = this.physics.add.group();
+        momentitethree.addMultiple(map.createFromTiles(momentite_tiles.firstgid+2, null, {key: 'momentitethree'}, this, this.cameras.main, proplayer));
+        proplayer.destroy();
 
         // -- PLAYER LOADING --
         player = this.physics.add.sprite(200, 200, 'spaceman');
@@ -117,12 +117,10 @@ class sceneLevelOne extends Phaser.Scene {
         projectiles = this.physics.add.group();
         this.physics.add.collider(player, layer, clingToWorld, null, this);
         this.physics.add.collider(player, flayer, clingToWorld, null, this);
-        this.physics.add.collider(player, yellowlasers, null, null, this);
-        this.physics.add.overlap(player, lasersprites, yellowEffects, null, this)
-        //this.physics.add.overlap(player, yellowlasers,yellowEffects, null ,this);
-
-        //this.physics.add.collider(player, layer, stickToWall);
-        //this.physics.add.collider(projectiles, layer, destroyRock);
+        this.physics.add.overlap(player, lasersprites, yellowEffects, null, this);
+        this.physics.add.overlap(player, momentiteone, hitOneGeode, null, this)
+        this.physics.add.overlap(player, momentitetwo, hitTwoGeode, null, this)
+        this.physics.add.overlap(player, momentitethree, hitThreeGeode, null, this)
 
         //-- INPUT CONTROLS --
         cursors = this.input.keyboard.createCursorKeys();
@@ -134,6 +132,8 @@ class sceneLevelOne extends Phaser.Scene {
 
         //-- LEVEL 1 SETTINGS --
         setProjectileCount(5);
+        lasersprites.setVelocityX(-300);
+        
     }
 
     update () {
@@ -198,6 +198,7 @@ var projectiles;
 var projectilecount;
 var projectileText;
 var cursors;
+var timeText;
 var projectilename = 'Momentite';
 
 var game = new Phaser.Game(config);
@@ -211,7 +212,7 @@ function setProjectileCount(newnum){
 }
 
 function adjustProjectileCount(adjustment){
-    projectilecount = projectilecount + adjustment;
+    projectilecount+= adjustment;
     projectileText.setText(projectilename +  " : " + projectilecount);
 }
 
@@ -238,8 +239,6 @@ function yellowEffects(){
     setProjectileCount(0);
     this.cameras.main.flash(1, 255,255,0);
 }
-
-
 
 function destroyProjectile(projectile, wall) {
     projectile.destroy();
@@ -301,4 +300,19 @@ function arrayFromRange(start, end){
         myarray.push(x);
     }
     return myarray;
+}
+
+function hitOneGeode(myplayer, mygeode){
+    adjustProjectileCount(1);
+    mygeode.destroy();
+}
+
+function hitTwoGeode(myplayer, mygeode){
+    adjustProjectileCount(2);
+    mygeode.destroy();
+}
+
+function hitThreeGeode(myplayer, mygeode){
+    adjustProjectileCount(3);
+    mygeode.destroy();
 }
