@@ -41,7 +41,7 @@ class sceneLevelOne extends Phaser.Scene {
         this.load.image('rock', 'assets/rock.png');
         this.load.image('tiles', 'assets/tiletest3.png');
         this.load.image('asteroid', 'assets/tiles/asteroid/asteroidtiles.png' );
-        this.load.image('all_lasers', 'assets/tiles/interactables/lasersheet.png' );
+        this.load.image('all_lasers', 'assets/tiles/interactables/newlasers.png' );
         this.load.tilemapTiledJSON('mymap', 'assets/maplvl1.json');
         this.load.multiatlas('spaceman', '/assets/tiles/character/spacesprite2.json', 'assets/tiles/character');
         this.load.image('momentitepile', 'assets/tiles/props/momentitetiles.png');
@@ -56,7 +56,7 @@ class sceneLevelOne extends Phaser.Scene {
         // Phaser's cache (i.e. the name you used in preload)
         const tileset1 = map.addTilesetImage("tiletest3", "tiles");
         const tileset2 = map.addTilesetImage("asteroidtiles", "asteroid");
-        const yellow_laser_tiles = map.addTilesetImage("mylasers", "all_lasers");
+        const yellow_laser_tiles = map.addTilesetImage("newlasers", "all_lasers");
         const momentite_tiles = map.addTilesetImage('freshprops', 'momentitepile');
         
         // Parameters: layer name (or index) from Tiled, tileset, x, y
@@ -70,9 +70,16 @@ class sceneLevelOne extends Phaser.Scene {
 
         //make sprites from Tiled map. (Possibly a hacky method)
         var yellowlasers = map.createStaticLayer("Yellow Laser", yellow_laser_tiles,0,0);
-        var lasersprites = this.physics.add.group();
-        lasersprites.addMultiple(map.createFromTiles([252,253,254,255,256, 257,258,259], null, {key: 'mininglaser'},this,this.cameras.main,yellowlasers));
+        yellowlaser1 = this.physics.add.group();
+        yellowlaser1.addMultiple(map.createFromTiles(arrayFromRange(yellow_laser_tiles.firstgid+3, yellow_laser_tiles.firstgid+6), null, {key: 'mininglaser'},this,this.cameras.main,yellowlasers));
+        var teleporter = this.physics.add.group();
+        teleporter.addMultiple(map.createFromTiles(yellow_laser_tiles.firstgid+13, null, {key: 'teleporter'}, this, this.cameras.main, proplayer));
         yellowlasers.destroy();
+
+        var yellowlasers2 = map.createStaticLayer("Yellow Laser 2", yellow_laser_tiles,0,0);
+        yellowlaser2 = this.physics.add.group();
+        yellowlaser2.addMultiple(map.createFromTiles(arrayFromRange(yellow_laser_tiles.firstgid+3, yellow_laser_tiles.firstgid+6), null, {key: 'mininglaser'},this,this.cameras.main,yellowlasers2));
+        yellowlasers2.destroy();
 
         var proplayer = map.createStaticLayer("Props", momentite_tiles, 0 ,0);
         var momentiteone = this.physics.add.group();
@@ -81,9 +88,12 @@ class sceneLevelOne extends Phaser.Scene {
         momentitetwo.addMultiple(map.createFromTiles(momentite_tiles.firstgid+1, null, {key: 'momentitetwo'}, this, this.cameras.main, proplayer));
         var momentitethree = this.physics.add.group();
         momentitethree.addMultiple(map.createFromTiles(momentite_tiles.firstgid+2, null, {key: 'momentitethree'}, this, this.cameras.main, proplayer));
-        var teleporter = this.physics.add.group();
-        teleporter.addMultiple(map.createFromTiles(momentite_tiles.firstgid+3, null, {key: 'teleporter'}, this, this.cameras.main, proplayer));
         proplayer.destroy();
+
+
+        // -- group identical sprites into arrays --
+        allyellowlasers = [yellowlaser1, yellowlaser2];
+        
 
         // -- PLAYER LOADING --
         player = this.physics.add.sprite(200, 200, 'spaceman');
@@ -121,7 +131,9 @@ class sceneLevelOne extends Phaser.Scene {
         projectiles = this.physics.add.group();
         this.physics.add.collider(player, layer, clingToWorld, null, this);
         this.physics.add.collider(player, flayer, clingToWorld, null, this);
-        this.physics.add.overlap(player, lasersprites, yellowEffects, null, this);
+        //can we do this with the allyellowlasers array?
+        this.physics.add.overlap(player, yellowlaser1, yellowEffects, null, this);
+        this.physics.add.overlap(player, yellowlaser2, yellowEffects, null, this);
         this.physics.add.overlap(player, momentiteone, hitOneGeode, null, this)
         this.physics.add.overlap(player, momentitetwo, hitTwoGeode, null, this)
         this.physics.add.overlap(player, momentitethree, hitThreeGeode, null, this)
@@ -136,7 +148,11 @@ class sceneLevelOne extends Phaser.Scene {
 
         //-- LEVEL 1 SETTINGS --
         setProjectileCount(5);
-        lasersprites.setVelocityX(-300);
+        laserspeed1 = 300;
+        gamebounds = [96, 7584];
+        playerspeed = 500;
+        yellowlaser1.setVelocityX(-laserspeed1);
+        yellowlaser2.setVelocityX(laserspeed1);
         
     }
 
@@ -145,14 +161,14 @@ class sceneLevelOne extends Phaser.Scene {
         
             if (cursors.left.isDown && (player.getData('cling')) && player.getData('cling') != 'left')
             {
-                player.setVelocityX(-300);
+                player.setVelocityX(-playerspeed);
                 player.setVelocityY(0);
                 player.setData('cling', null);
         
             }
             else if (cursors.right.isDown &&(player.getData('cling')) && player.getData('cling') != 'right')
             {
-                player.setVelocityX(300);
+                player.setVelocityX(playerspeed);
                 player.setVelocityY(0);
                 player.setData('cling', null);
         
@@ -160,18 +176,18 @@ class sceneLevelOne extends Phaser.Scene {
         
             if (cursors.up.isDown && (player.getData('cling')) && player.getData('cling') != 'up')
             {
-                player.setVelocityY(-330);
+                player.setVelocityY(-playerspeed);
                 player.setVelocityX(0);
                 player.setData('cling', null);
             }
         
             if (cursors.down.isDown && (player.getData('cling')) && player.getData('cling') != 'down')
             {
-                player.setVelocityY(330);
+                player.setVelocityY(playerspeed);
                 player.setVelocityX(0);
                 player.setData('cling', null);
             }
-        
+            allyellowlasers.forEach(a => reverseSpritesAtBoundaries(a, gamebounds, 1.1));        
     }
 }
 
@@ -203,7 +219,13 @@ var projectilecount;
 var projectileText;
 var cursors;
 var timeText;
+var playerspeed;
+var gamebounds;
+var allyellowlasers;
+var yellowlaser1;
+var yellowlaser2;
 var projectilename = 'Momentite';
+var laserspeed1;
 
 var game = new Phaser.Game(config);
 
@@ -260,6 +282,15 @@ function anyCursorHeld() {
     return cursors.up.isDown || cursors.down.isDown || cursors.left.isDown || cursors.right.isDown;
 }
 
+
+function reverseSpritesAtBoundaries(spritegroup, levelbounds, factor){
+    if (spritegroup.getFirstAlive().x < levelbounds[0]){
+        spritegroup.setVelocityX(laserspeed1*factor);
+    }
+    else if (spritegroup.getFirstAlive().x > levelbounds[1]){
+        spritegroup.setVelocityX(-laserspeed1*factor);
+    }
+}
 function attemptJumpThrow(context) {
 
     if (anyCursorHeld() && projectilecount > 0) {
@@ -270,26 +301,26 @@ function attemptJumpThrow(context) {
 
         switch (playerDirection) {
             case 'UP':
-                player.setVelocityY(-300);
+                player.setVelocityY(-playerspeed);
                 player.setVelocityX(0);
                 r.setVelocityY(600);
                 break;
             case 'DOWN':
                 player.anims.play('confused', true);
-                player.setVelocityY(300);
+                player.setVelocityY(playerspeed);
                 player.setVelocityX(0);
                 r.setVelocityY(-600);
                 break;
             case 'LEFT':
                 player.anims.play('turnleft', true);
                 player.setVelocityY(0);
-                player.setVelocityX(-300);
+                player.setVelocityX(-playerspeed);
                 r.setVelocityX(600);
                 break;
             case 'RIGHT':
                 player.anims.play('turnright', true);
                 player.setVelocityY(0);
-                player.setVelocityX(300);
+                player.setVelocityX(playerspeed);
                 r.setVelocityX(-600);
                 break;
         }
