@@ -36,11 +36,12 @@ class sceneLevelOne extends Phaser.Scene {
         this.load.image('momentiteone', 'assets/tiles/props/momentiteonepile.png');
         this.load.image('momentitetwo', 'assets/tiles/props/momentitetwopile.png');
         this.load.image('momentitethree', 'assets/tiles/props/momentitethreepile.png');
+        this.load.image('teleporter', 'assets/tiles/props/teleporter.png');
         this.load.image('mininglaser', 'assets/tiles/interactables/yellowlaserextension.png');
         this.load.image('rock', 'assets/rock.png');
-        this.load.image('tiles', 'assets/tiletest3.png')
-        this.load.image('asteroid', 'assets/tiles/asteroid/asteroidtiles.png' )
-        this.load.image('all_lasers', 'assets/tiles/interactables/lasersheet.png' )
+        this.load.image('tiles', 'assets/tiletest3.png');
+        this.load.image('asteroid', 'assets/tiles/asteroid/asteroidtiles.png' );
+        this.load.image('all_lasers', 'assets/tiles/interactables/lasersheet.png' );
         this.load.tilemapTiledJSON('mymap', 'assets/maplvl1.json');
         this.load.multiatlas('spaceman', '/assets/tiles/character/spacesprite2.json', 'assets/tiles/character');
         this.load.image('momentitepile', 'assets/tiles/props/momentitetiles.png');
@@ -56,18 +57,19 @@ class sceneLevelOne extends Phaser.Scene {
         const tileset1 = map.addTilesetImage("tiletest3", "tiles");
         const tileset2 = map.addTilesetImage("asteroidtiles", "asteroid");
         const yellow_laser_tiles = map.addTilesetImage("mylasers", "all_lasers");
-        const momentite_tiles = map.addTilesetImage('proptiles', 'momentitepile');
+        const momentite_tiles = map.addTilesetImage('freshprops', 'momentitepile');
         
         // Parameters: layer name (or index) from Tiled, tileset, x, y
         const layer = map.createStaticLayer("Tile Layer 1", tileset1,0,0);
         const flayer = map.createStaticLayer("Tile Layer 2", tileset2,0,0);
-        var yellowlasers = map.createStaticLayer("Yellow Laser", yellow_laser_tiles,0,0);
+        
         
         //enable collisions on all tiles in below layers
         layer.setCollisionBetween(tileset1.firstgid, tileset1.firstgid+tileset1.total -1);
         flayer.setCollisionBetween(tileset2.firstgid, tileset2.firstgid +tileset2.total -1);
 
         //make sprites from Tiled map. (Possibly a hacky method)
+        var yellowlasers = map.createStaticLayer("Yellow Laser", yellow_laser_tiles,0,0);
         var lasersprites = this.physics.add.group();
         lasersprites.addMultiple(map.createFromTiles([252,253,254,255,256, 257,258,259], null, {key: 'mininglaser'},this,this.cameras.main,yellowlasers));
         yellowlasers.destroy();
@@ -79,6 +81,8 @@ class sceneLevelOne extends Phaser.Scene {
         momentitetwo.addMultiple(map.createFromTiles(momentite_tiles.firstgid+1, null, {key: 'momentitetwo'}, this, this.cameras.main, proplayer));
         var momentitethree = this.physics.add.group();
         momentitethree.addMultiple(map.createFromTiles(momentite_tiles.firstgid+2, null, {key: 'momentitethree'}, this, this.cameras.main, proplayer));
+        var teleporter = this.physics.add.group();
+        teleporter.addMultiple(map.createFromTiles(momentite_tiles.firstgid+3, null, {key: 'teleporter'}, this, this.cameras.main, proplayer));
         proplayer.destroy();
 
         // -- PLAYER LOADING --
